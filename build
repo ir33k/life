@@ -1,0 +1,5 @@
+#!/usr/bin/env sh
+set -ex # Stop on first error and log all commands
+CC="cc"
+CFLAGS="-Wall -Wextra -Wshadow -Wmissing-declarations -Wswitch-enum -pedantic -std=c89"
+$CC $CFLAGS -o life main.c
