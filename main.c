@@ -3,6 +3,7 @@
  * https://en.wikipedia.org/wiki/Conway's_Game_of_Life
  */
 #include <stdio.h>
+#include <stdlib.h>
 #include "main.h"
 
 static u8
@@ -49,9 +50,9 @@ board_print(FILE *out)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
-	u32 i;
+	u32 i, steps = argc > 1 ? atoi(argv[1]) : 5;
 
 	/* Glaider */
 	s_board[s_i][1][2] = 1;
@@ -60,7 +61,7 @@ main(void)
 	s_board[s_i][3][2] = 1;
 	s_board[s_i][3][3] = 1;
 
-	for (i=0; i < 5; i++) {
+	for (i=0; i < steps; i++) {
 		printf("%d\n", i);
 		board_print(stdout);
 		board_next();
