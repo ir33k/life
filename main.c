@@ -1,72 +1,102 @@
 /**
  * Conway's Game of Life
  * https://en.wikipedia.org/wiki/Conway's_Game_of_Life
+ *
+ *	$ ./build
+ *	$ ./life
  */
 #include <stdio.h>
-#include <stdlib.h>
-#include "main.h"
-
-static u8
-cell_neighbours(i32 x, i32 y)
-{
-	static const i8 map_y[8] = {-1, -1, -1, +0, +0, +1, +1, +1};
-	static const i8 map_x[8] = {-1, +0, +1, -1, +1, -1, +0, +1};
-	u8 res = 0;		/* Result, number of neighbours */
-	i32 i, dx, dy;		/* Index and delta coordinates */
-	for (i=0; i<8; i++) {
-		dy = y + map_y[i];
-		dx = x + map_x[i];
-		if (dy < 0 || dy >= SIZ_Y) continue;
-		if (dx < 0 || dx >= SIZ_X) continue;
-		res += s_board[s_i][dy][dx];
-	}
-	return res;
-}
-
-static void
-board_next(void)
-{
-	u8 next = !s_i;		/* Index of next board */
-	u8 nth;			/* Number of neighbours */
-	u8 alive;		/* Non 0 when cell is alive */
-	i32 x,y;
-	for (y=0; y < SIZ_Y; y++)
-	for (x=0; x < SIZ_X; x++) {
-		nth = cell_neighbours(x, y);
-		alive = s_board[s_i][y][x];
-		s_board[next][y][x] = nth == 3 || (alive && nth == 2);
-	}
-	s_i = next;		/* Switch boards */
-}
-
-static void
-board_print(FILE *out)
-{
-	i32 x,y;
-	for (y=0; y < SIZ_Y; y++) {
-		for (x=0; x < SIZ_X; x++) {
-			fputs(s_board[s_i][y][x] ? "# " : ". ", out);
-		}
-		fputs("\b\n", out);
-	}
-}
+#include <X11/Xlib.h>
+#include "life.h"
+#include "type.h"
 
 int
-main(int argc, char **argv)
+main(void)
 {
-	u32 i, steps = argc > 1 ? atoi(argv[1]) : 5;
+	struct life life = {0};	/* Game of life instance */
+	u8	 run;		/* Value of 0 will close window */
+	Display *disp;		/* X display */
+	Window   root;		/* Parent window */
+	Window   win;		/* Window */
+	Atom     wmdel;		/* WM delete window atom */
+	XEvent	 event;		/* For capturing window events */
+	KeySym	 key;		/* Pressed keyboard key */
+	GC       gc;		/* Graphical context */
+	u64      fg, bg;	/* Foreground and background color */
 
-	/* Glaider */
-	s_board[s_i][1][2] = 1;
-	s_board[s_i][2][3] = 1;
-	s_board[s_i][2][4] = 1;
-	s_board[s_i][3][2] = 1;
-	s_board[s_i][3][3] = 1;
+	/* Game of life */
+	life.w = 800;
+	life.h = 600;
+	/* Glider */
+	life.arr[life.i][1][2] = 1;
+	life.arr[life.i][2][3] = 1;
+	life.arr[life.i][2][4] = 1;
+	life.arr[life.i][3][2] = 1;
+	life.arr[life.i][3][3] = 1;
 
-	for (i=0; i < steps; i++) {
-		printf("%d\n", i);
-		board_print(stdout);
-		board_next();
+	/* init */
+	if ((disp = XOpenDisplay(0)) == 0) {
+		fprintf(stderr, "ERR: Could not open defult disply");
+		return 1;
 	}
+	root = DefaultRootWindow(disp);
+	fg = 0x000000;
+	bg = 0xffffff;
+	win = XCreateSimpleWindow(disp, root, 0, 0, 800, 600, 2, fg, bg);
+	wmdel = XInternAtom(disp, "WM_DELETE_WINDOW", 0);
+	gc = XCreateGC(disp, win, 0, 0);
+	XStoreName(disp, win, "life"); /* Set window title */
+	XSetWMProtocols(disp, win, &wmdel, 1);
+	XSelectInput(disp, win, ExposureMask | ButtonPressMask | KeyPressMask);
+	XMapWindow(disp, win);	       /* Show window */
+	run = 1;
+	while (run) {
+		if (XPending(disp) == 0) {
+			continue;
+		}
+		XNextEvent(disp, &event);
+		switch (event.type) {
+		case Expose:
+			if (event.xexpose.count) {
+				continue;
+			}
+			/* No events, we can draw now. */
+			XClearWindow(disp, win);
+			life_next(&life);
+			continue;
+		case ButtonPress:
+			XClearWindow(disp, win);
+ 			XSetForeground(disp, gc, fg);
+			XFillRectangle(disp, win, gc,
+				       event.xbutton.x - event.xbutton.x%8 - 4,
+				       event.xbutton.y - event.xbutton.y%8 - 4,
+				       8, 8);
+			continue;
+		case KeyPress:
+			key = XLookupKeysym(&event.xkey, 0);
+
+			/* Print pressed key as number and char. */
+			printf("xkey:\t%ld\t%c\n", key, (char)key);
+
+			switch (key) {
+			case 65307:		/* Esc */
+			case 'q': case 'Q':
+			case 'c': case 'C':
+			case 'x': case 'X':
+				run = 0;        /* Quit */
+				continue;
+			}
+			continue;
+		case ClientMessage:
+			if ((Atom)event.xclient.data.l[0] == wmdel) {
+				run = 0;
+			}
+			continue;
+		}
+	}
+	/* close */
+	XFreeGC(disp, gc);
+	XCloseDisplay(disp);
+	XDestroyWindow(disp, win);
 	return 0;
 }
