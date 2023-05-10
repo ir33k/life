@@ -15,6 +15,10 @@ struct life {
 	u8      i;		/* Index of current board */
 };
 
+/* Calculate next game of life board state in given LIFE context. */
 void life_next(struct life *life);
+
+/*  */
+void life_rand(struct life *life);
 
 #endif /* _LIFE_H */

@@ -1,13 +1,15 @@
 #include "life.h"
+#include <stdlib.h>
 
+/* Return number of alive neighbor for X,Y cell in LIFE context. */
 static u8
-life_neighbors(struct life *life, u16 x, u16 y)
+neighbors(struct life *life, u16 x, u16 y)
 {
 	static const i8 map_y[8] = {-1, -1, -1, +0, +0, +1, +1, +1};
 	static const i8 map_x[8] = {-1, +0, +1, -1, +1, -1, +0, +1};
 	u8 res = 0;		/* Result, number of neighbours */
 	i32 i, dx, dy;		/* Index and delta coordinates */
-	for (i=0; i<8; i++) {
+	for (i=0; i < 8; i++) {
 		dy = y + map_y[i];
 		dx = x + map_x[i];
 		if (dy < 0 || dy >= life->h) continue;
@@ -26,9 +28,20 @@ life_next(struct life *life)
 	u16 x,y;
 	for (y=0; y < life->h; y++)
 	for (x=0; x < life->w; x++) {
-		nth = life_neighbors(life, x, y);
+		nth = neighbors(life, x, y);
 		alive = life->arr[life->i][y][x];
 		life->arr[next][y][x] = nth == 3 || (alive && nth == 2);
 	}
 	life->i = next;		/* Switch boards */
+}
+
+void
+life_rand(struct life *life)
+{
+	static int half = RAND_MAX/2;
+	u16 x,y;
+	for (y=0; y < life->h; y++)
+	for (x=0; x < life->w; x++) {
+		life->arr[life->i][y][x] = rand() > half;
+	}
 }
