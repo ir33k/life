@@ -33,9 +33,9 @@ draw(Display *disp, Drawable win, GC gc, Life *life)
 	u16 x, y;
 	XClearWindow(disp, win);
 	XSetForeground(disp, gc, COLOR_FG);
-	for (y=0; y < life->h; y++)
-	for (x=0; x < life->w; x++) {
-		if (!life->arr[life->i][y][x]) {
+	for (y=0; y < life->_h; y++)
+	for (x=0; x < life->_w; x++) {
+		if (!life->arr[life->_i][y][x]) {
 			continue;
 		}
 		XFillRectangle(disp, win, gc, x*s_siz, y*s_siz, s_siz, s_siz);
@@ -105,7 +105,7 @@ main(void)
 			continue;
 		case ButtonPress:
 			/* Toggle cell with mouse click */
-			cell = &life.arr[life.i][event.xbutton.y/s_siz][event.xbutton.x/s_siz];
+			cell = &life.arr[life._i][event.xbutton.y/s_siz][event.xbutton.x/s_siz];
 			*cell = !*cell;
 			draw(disp, win, gc, &life);
 			continue;

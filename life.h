@@ -9,10 +9,11 @@
 
 #define LIFE_MAX	1024	/* Max board width and height */
 
+/* Fields prefixed with "_" are consider readonly. */
 typedef struct {
-	u16     w,h;		/* Board width and height */
 	u16     arr[2][LIFE_MAX][LIFE_MAX]; /* Boards [0-1][y][x] */
-	u8      i;		/* Index of current board */
+	u16     _w, _h;		/* Board width and height */
+	u8      _i;		/* Index of current board */
 } Life;
 
 /* Change max LIFE WIDTH and HEIGHT. */
