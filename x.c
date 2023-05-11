@@ -154,7 +154,7 @@ main(void)
 		}
 	}
 	XFreeGC(disp, gc);
-	XCloseDisplay(disp);
 	XDestroyWindow(disp, win);
+	XCloseDisplay(disp);
 	return 0;
 }
