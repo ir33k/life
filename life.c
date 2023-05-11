@@ -3,7 +3,7 @@
 
 /* Return number of alive neighbor for X,Y cell in LIFE context. */
 static u8
-neighbors(struct life *life, u16 x, u16 y)
+neighbors(Life *life, u16 x, u16 y)
 {
 	static const i8 map_y[8] = {-1, -1, -1, +0, +0, +1, +1, +1};
 	static const i8 map_x[8] = {-1, +0, +1, -1, +1, -1, +0, +1};
@@ -20,7 +20,14 @@ neighbors(struct life *life, u16 x, u16 y)
 }
 
 void
-life_next(struct life *life)
+life_resize(Life *life, u16 width, u16 height)
+{
+	life->w = width  >= LIFE_MAX ? LIFE_MAX-1 : width;
+	life->h = height >= LIFE_MAX ? LIFE_MAX-1 : height;
+}
+
+void
+life_next(Life *life)
 {
 	u8 next = !life->i;	/* Index of next board */
 	u8 nth;			/* Number of neighbours */
@@ -36,9 +43,9 @@ life_next(struct life *life)
 }
 
 void
-life_rand(struct life *life)
+life_rand(Life *life)
 {
-	static int half = RAND_MAX/2;
+	static i32 half = RAND_MAX/2;
 	u16 x,y;
 	for (y=0; y < life->h; y++)
 	for (x=0; x < life->w; x++) {

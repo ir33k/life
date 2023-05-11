@@ -9,4 +9,4 @@ CFLAGS="-Wall -Wextra -Wshadow -Wmissing-declarations -Wswitch-enum -pedantic -s
 CCF="$CC $CFLAGS"
 
 $CCF -c life.c
-$CCF -o life life.o main.c $X11_LIB_FLAG
+$CCF -o life.x life.o x.c $X11_LIB_FLAG

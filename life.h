@@ -9,16 +9,19 @@
 
 #define LIFE_MAX	1024	/* Max board width and height */
 
-struct life {
+typedef struct {
 	u16     w,h;		/* Board width and height */
-	u16     arr[2][LIFE_MAX][LIFE_MAX]; /* Boards */
+	u16     arr[2][LIFE_MAX][LIFE_MAX]; /* Boards [0-1][y][x] */
 	u8      i;		/* Index of current board */
-};
+} Life;
+
+/* Change max LIFE WIDTH and HEIGHT. */
+void life_resize(Life *life, u16 width, u16 height);
 
 /* Calculate next game of life board state in given LIFE context. */
-void life_next(struct life *life);
+void life_next(Life *life);
 
-/*  */
-void life_rand(struct life *life);
+/* Randomize LIFE board data. */
+void life_rand(Life *life);
 
 #endif /* _LIFE_H */
