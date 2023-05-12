@@ -52,3 +52,13 @@ life_rand(Life *life)
 		life->arr[life->_i][y][x] = rand() > half;
 	}
 }
+
+void
+life_clear(Life *life)
+{
+	u16 x,y;
+	for (y=0; y < life->_h; y++)
+	for (x=0; x < life->_w; x++) {
+		life->arr[life->_i][y][x] = 0;
+	}
+}

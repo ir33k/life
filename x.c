@@ -57,12 +57,12 @@ main(void)
 	clock_t  time;		/* Current time */
 	Life     life = {0};	/* Game of life instance */
 	u8	 quit;		/* Non 0 value it will quit window */
+	u16     *cell;		/* Pointer to single Life cell */
 	Display *disp;		/* X display */
 	Window   win;		/* Window */
 	Atom     wmdel;		/* WM delete window atom */
 	XEvent	 event;		/* For capturing window events */
 	GC       gc;		/* Graphical context */
-	u16     *cell;
 
 	if ((disp = XOpenDisplay(0)) == 0) {
 		fprintf(stderr, "ERR: Could not open defult disply");
@@ -84,7 +84,10 @@ main(void)
 	while (quit == 0) {
 		if (XPending(disp) == 0) {
 			time = clock();
-			if (s_pause || time - last < CLOCKS_PER_SEC*s_delay) {
+			if (s_pause) {
+				continue;
+			}
+			if (time - last < CLOCKS_PER_SEC*s_delay) {
 				continue;
 			}
 			last = time;
@@ -99,58 +102,59 @@ main(void)
 		switch (event.type) {
 		case Expose:
 			if (event.xexpose.count) {
-				continue;
+				break;
 			}
 			draw(disp, win, gc, &life);
-			continue;
+			break;
 		case ButtonPress:
 			/* Toggle cell with mouse click */
 			cell = &life.arr[life._i][event.xbutton.y/s_siz][event.xbutton.x/s_siz];
 			*cell = !*cell;
 			draw(disp, win, gc, &life);
-			continue;
+			break;
 		case KeyPress:
 			switch (XLookupKeysym(&event.xkey, 0)) {
 			case ' ': /* Start/stop */
 				s_pause = !s_pause;
-				continue;
+				break;
 			case 'r': /* Random */
 				life_rand(&life);
-				draw(disp, win, gc, &life);
-				continue;
+				break;
+			case 'c': /* clear */
+				life_clear(&life);
+				break;
 			case '[': /* Slow down */
 				s_delay *= 2;
-				continue;
+				break;
 			case ']': /* Speed up */
 				s_delay /= 2;
-				continue;
+				break;
 			case '=': /* Scale up */
 				s_siz += 1;
 				resize(disp, win, &life);
-				draw(disp, win, gc, &life);
-				continue;
+				break;
 			case '-': /* Scale down */
 				if (s_siz <= 1) {
-					continue;
+					break;
 				}
 				s_siz -= 1;
 				resize(disp, win, &life);
-				draw(disp, win, gc, &life);
-				continue;
+				break;
 			case 0xff1b: /* Esc */
 			case 'q':
 				quit = 1; /* Quit */
-				continue;
+				break;
 			}
-			continue;
+			draw(disp, win, gc, &life);
+			break;
 		case ConfigureNotify:
 			resize(disp, win, &life);
-			continue;
+			break;
 		case ClientMessage:
 			if ((Atom)event.xclient.data.l[0] == wmdel) {
 				quit = 1;
 			}
-			continue;
+			break;
 		}
 	}
 	XFreeGC(disp, gc);

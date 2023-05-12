@@ -25,4 +25,7 @@ void life_next(Life *life);
 /* Randomize LIFE board data. */
 void life_rand(Life *life);
 
+/* Clear LIFE board data.  Set all cells to "dead" (0) state. */
+void life_clear(Life *life);
+
 #endif /* _LIFE_H */
