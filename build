@@ -1,12 +1,13 @@
 #!/usr/bin/env sh
 set -ex # Stop on first error and log all commands
 
-# Get flag for C compiler that will help link with X11 lib.
-X11_LIB_FLAG="$(pkg-config x11 --cflags --libs)"
-
 CC="cc"
 CFLAGS="-Wall -Wextra -Wshadow -Wmissing-declarations -Wswitch-enum -pedantic -std=c89"
 CCF="$CC $CFLAGS"
 
+# Main game of life lib
 $CCF -c life.c
+
+# X11
+X11_LIB_FLAG="$(pkg-config x11 --cflags --libs)"
 $CCF -o life.x life.o x.c $X11_LIB_FLAG
