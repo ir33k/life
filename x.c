@@ -9,93 +9,102 @@
 #include "type.h"
 #include <X11/Xlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <time.h>
 
-#define WIN_TITLE  "life"	/* Window title */
-#define WIN_WIDTH  800		/* Initial window width */
-#define WIN_HEIGHT 600		/* Initial window height */
-#define COLOR_FG   0x000000	/* Foreground color */
-#define COLOR_BG   0xffffff	/* Background color */
+#define TITLE   "life"		/* Window title */
+#define HEIGHT  600		/* Initial window height */
+#define WIDTH   800		/* Initial window width */
+#define C_BG    0xffffff	/* Background color */
+#define C_FG    0x000000	/* Foreground color */
 
-static u16 s_siz = 6;		/* Width and height of cell in px */
-static f32 s_delay = 0.15;	/* Delay between updates in seconds */
-static u8  s_pause = 0;		/* Pause game when non 0 */
+static u16      s_siz = 6;	/* Width and height of cell in px */
+static f32      s_delay = 0.15;	/* Delay between updates in seconds */
+static u8       s_pause = 0;	/* Pause game when non 0 */
+static Life     s_game = {0};	/* Game of life instance */
+static Display *s_disp;		/* X display */
+static Window   s_win;		/* Window */
+static GC       s_gc;		/* Graphical context */
 
 static void
-update(Life *life)
+update(void)
 {
-	life_next(life);
+	life_next(&s_game);
 }
 
 static void
-draw(Display *disp, Drawable win, GC gc, Life *life)
+draw(void)
 {
 	u16 x, y;
-	XClearWindow(disp, win);
-	XSetForeground(disp, gc, COLOR_FG);
-	for (y=0; y < life->_h; y++)
-	for (x=0; x < life->_w; x++) {
-		if (!life->arr[life->_i][y][x]) {
+	XClearWindow(s_disp, s_win);
+	XSetForeground(s_disp, s_gc, C_FG);
+	for (y=0; y < s_game._h; y++)
+	for (x=0; x < s_game._w; x++) {
+		if (!s_game.arr[s_game._i][y][x]) {
 			continue;
 		}
-		XFillRectangle(disp, win, gc, x*s_siz, y*s_siz, s_siz, s_siz);
+		XFillRectangle(s_disp, s_win, s_gc, x*s_siz, y*s_siz, s_siz, s_siz);
 	}
 }
 
+/* Set game of life board size using X window size. */
 static void
-resize(Display *disp, Drawable win, Life *life)
+resize(void)
 {
 	XWindowAttributes wa;
-	XGetWindowAttributes(disp, win, &wa);
-	life_resize(life, wa.width/s_siz, wa.height/s_siz);
+	XGetWindowAttributes(s_disp, s_win, &wa);
+	life_resize(&s_game, wa.width/s_siz, wa.height/s_siz);
+}
+
+static void
+quit(void)
+{
+	XFreeGC(s_disp, s_gc);
+	XDestroyWindow(s_disp, s_win);
+	XCloseDisplay(s_disp);
+	exit(0);
 }
 
 int
 main(void)
 {
-	clock_t  last;		/* Last update time */
-	clock_t  time;		/* Current time */
-	Life     life = {0};	/* Game of life instance */
-	u8	 quit;		/* Non 0 value it will quit window */
+	clock_t  next = 0;	/* Time of next update */
+	clock_t  time;		/* Current CPU clock time */
 	u16     *cell;		/* Pointer to single Life cell */
-	Display *disp;		/* X display */
-	Window   win;		/* Window */
 	Atom     wmdel;		/* WM delete window atom */
 	XEvent	 event;		/* For capturing window events */
-	GC       gc;		/* Graphical context */
 
-	if ((disp = XOpenDisplay(0)) == 0) {
+	if ((s_disp = XOpenDisplay(0)) == 0) {
 		fprintf(stderr, "ERR: Could not open defult disply");
 		return 1;
 	}
-	win = XCreateSimpleWindow(disp, DefaultRootWindow(disp),
-				  0, 0, WIN_WIDTH, WIN_HEIGHT,
-				  0, 0, COLOR_BG);
-	wmdel = XInternAtom(disp, "WM_DELETE_WINDOW", 0);
-	gc = XCreateGC(disp, win, 0, 0);
-	XStoreName(disp, win, WIN_TITLE);
-	XSetWMProtocols(disp, win, &wmdel, 1);
-	XSelectInput(disp, win, ExposureMask | ButtonPressMask | KeyPressMask | StructureNotifyMask);
-	XMapWindow(disp, win);	/* Show window */
-	resize(disp, win, &life);
-	life_rand(&life);
-	last = 0;
-	quit = 0;
-	while (quit == 0) {
-		if (XPending(disp) == 0) {
-			time = clock();
+	s_win = XCreateSimpleWindow(s_disp, DefaultRootWindow(s_disp),
+				  0, 0, WIDTH, HEIGHT,
+				  0, 0, C_BG);
+	wmdel = XInternAtom(s_disp, "WM_DELETE_WINDOW", 0);
+	s_gc = XCreateGC(s_disp, s_win, 0, 0);
+	XStoreName(s_disp, s_win, TITLE);
+	XSetWMProtocols(s_disp, s_win, &wmdel, 1);
+	XSelectInput(s_disp, s_win,
+		     ExposureMask | ButtonPressMask | KeyPressMask |
+		     StructureNotifyMask);
+	XMapWindow(s_disp, s_win); /* Show window */
+	resize();
+	life_rand(&s_game);
+	while (1) {
+		if (XPending(s_disp) == 0) {
 			if (s_pause) {
 				continue;
 			}
-			if (time - last < CLOCKS_PER_SEC*s_delay) {
+			if ((time = clock()) < next) {
 				continue;
 			}
-			last = time;
-			update(&life);
-			draw(disp, win, gc, &life);
+			next = time + CLOCKS_PER_SEC*s_delay;
+			update();
+			draw();
 			continue;
 		}
-		XNextEvent(disp, &event);
+		XNextEvent(s_disp, &event);
 		if (XFilterEvent(&event, None)) {
 			continue;
 		}
@@ -104,13 +113,13 @@ main(void)
 			if (event.xexpose.count) {
 				break;
 			}
-			draw(disp, win, gc, &life);
+			draw();
 			break;
 		case ButtonPress:
 			/* Toggle cell with mouse click */
-			cell = &life.arr[life._i][event.xbutton.y/s_siz][event.xbutton.x/s_siz];
+			cell = &s_game.arr[s_game._i][event.xbutton.y/s_siz][event.xbutton.x/s_siz];
 			*cell = !*cell;
-			draw(disp, win, gc, &life);
+			draw();
 			break;
 		case KeyPress:
 			switch (XLookupKeysym(&event.xkey, 0)) {
@@ -118,10 +127,10 @@ main(void)
 				s_pause = !s_pause;
 				break;
 			case 'r': /* Random */
-				life_rand(&life);
+				life_rand(&s_game);
 				break;
 			case 'c': /* clear */
-				life_clear(&life);
+				life_clear(&s_game);
 				break;
 			case '[': /* Slow down */
 				s_delay *= 2;
@@ -131,34 +140,31 @@ main(void)
 				break;
 			case '=': /* Scale up */
 				s_siz += 1;
-				resize(disp, win, &life);
+				resize();
 				break;
 			case '-': /* Scale down */
 				if (s_siz <= 1) {
 					break;
 				}
 				s_siz -= 1;
-				resize(disp, win, &life);
+				resize();
 				break;
 			case 0xff1b: /* Esc */
 			case 'q':
-				quit = 1; /* Quit */
+				quit();
 				break;
 			}
-			draw(disp, win, gc, &life);
+			draw();
 			break;
 		case ConfigureNotify:
-			resize(disp, win, &life);
+			resize();
 			break;
 		case ClientMessage:
 			if ((Atom)event.xclient.data.l[0] == wmdel) {
-				quit = 1;
+				quit();
 			}
 			break;
 		}
 	}
-	XFreeGC(disp, gc);
-	XDestroyWindow(disp, win);
-	XCloseDisplay(disp);
 	return 0;
 }
