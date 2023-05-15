@@ -37,7 +37,7 @@ life_next(Life *life)
 	for (x=0; x < life->_w; x++) {
 		nth = neighbors(life, x, y);
 		alive = life->arr[life->_i][y][x];
-		life->arr[next][y][x] = nth == 3 || (alive && nth == 2);
+		life->arr[next][y][x] = nth == 3 || (alive + nth == 3);
 	}
 	life->_i = next;		/* Switch boards */
 }
