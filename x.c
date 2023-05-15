@@ -11,11 +11,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <err.h>
 
 #define TITLE   "life"		/* Window title */
 #define HEIGHT  600		/* Initial window height */
 #define WIDTH   800		/* Initial window width */
-#define FPS     30		/* Drawing FPS */
+#define FPS     60		/* Drawing FPS */
 #define C_BG    0xffffff	/* Background color */
 #define C_FG    0x000000	/* Foreground color */
 #define C_MOUSE 0xff0000	/* Mouse cursor color */
@@ -27,7 +28,7 @@
  * settings like WIDTH, HEIGHT, FPS etc and define UPDATE, DRAW and
  * RESIZE functions along with key bindings and mouse handling. */
 static u16      s_siz = 6;	/* Width and height of cell in px */
-static f32      s_delay = 0.15;	/* Delay between updates in seconds */
+static f32      s_delay = 0.01; /* Delay between updates in seconds */
 static u8       s_pause = 0;	/* Pause game when non 0 */
 static Life     s_game = {0};	/* Game of life instance */
 static Display *s_disp;		/* X display */
@@ -101,11 +102,13 @@ quit(void)
 int
 main(void)
 {
-	clock_t  next = 0;	/* CPU clock time of next update */
-	clock_t  time;		/* Current CPU clock time */
+	clock_t  last = 0;	/* CPU clock time after last update */
 	u16     *cell;		/* Pointer to single Life cell */
 	Atom     wmdel;		/* WM delete window atom */
 	i32      screen;	/* Default screen */
+
+	struct timespec sleep = {0, 1000000000/FPS};
+	struct timespec rem;
 
 	if ((s_disp = XOpenDisplay(0)) == 0) {
 		fprintf(stderr, "ERR: Could not open defult disply");
@@ -155,11 +158,9 @@ main(void)
 					break;
 				case '[': /* Slow down */
 					s_delay *= 2;
-					next = clock() + CLOCKS_PER_SEC*s_delay;
 					break;
 				case ']': /* Speed up */
 					s_delay /= 2;
-					next = clock() + CLOCKS_PER_SEC*s_delay;
 					break;
 				case '=': /* Scale up */
 					s_siz += 1;
@@ -188,14 +189,14 @@ main(void)
 				break;
 			}
 		}
-		if ((time = clock()) > next) {
-			if (!s_pause) {
-				update();
-			}
-			next = time + CLOCKS_PER_SEC*s_delay;
-			draw();
+		if (!s_pause && clock() - last >= CLOCKS_PER_SEC*s_delay) {
+			update();
+			last = clock();
 		}
-		/* TODO(irek): Problem of 100% CPU usage still remains. */
+		draw();
+		if (nanosleep(&sleep, &rem) < 0) {
+			err(1, "nanosleep");
+		}
 	}
 	return 0;
 }
